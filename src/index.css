@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import 'tailwindcss';
+
+/* Theme tokens define the site's light and dark color system and the shared typography reference. */
+@theme {
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'JetBrains Mono', monospace;
+}
+
+/* Light theme is the default fallback when no persisted theme is present. */
+:root {
+  --bg:            #ffffff;
+  --bg-subtle:     #f8f9fa;
+  --fg:            #1a1a1a;
+  --fg-muted:      #6b7280;
+  --fg-dim:        #9ca3af;
+  --border:        #e5e7eb;
+  --border-strong: #1a1a1a;
+  --tag-border:    #9ca3af;
+  --tag-text:      #4b5563;
+  --hover-bg:      #f4f4f5;
+  --cursor-color:  #1a1a1a;
+  --badge-border:  #e5e7eb;
+  --badge-text:    #6b7280;
+  --err:           #dc2626;
+}
+
+/* Dark theme overrides the base palette with a higher-contrast, terminal-style surface. */
+.dark {
+  --bg:            #0d1117;
+  --bg-subtle:     #161b22;
+  --fg:            #e6edf3;
+  --fg-muted:      #8b949e;
+  --fg-dim:        #484f58;
+  --border:        #30363d;
+  --border-strong: #e6edf3;
+  --tag-border:    #30363d;
+  --tag-text:      #8b949e;
+  --hover-bg:      #1c2128;
+  --cursor-color:  #3fb950;
+  --badge-border:  #30363d;
+  --badge-text:    #8b949e;
+  --err:           #f85149;
+}
+
+
+/* Shared placeholder styling for terminal-like inputs that use the same mono token system. */
+.term-input::placeholder { color: var(--fg-dim); opacity: 1; }
+
+* {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #fff;
+}
+::-webkit-scrollbar-thumb {
+  background: #000;
+}
+
+/* Simple blink animation for the terminal-style text cursor in the header and input row. */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+.scanline {
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+}
+
+::selection {
+  background: #000;
+  color: #fff;
+}
