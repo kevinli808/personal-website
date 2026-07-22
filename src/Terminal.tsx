@@ -337,6 +337,7 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
     type === 'err' ? tc.err : type === 'cmd' ? tc.cmd : tc.out
 
   const showOutput = outputH > 0
+  const showKeyboardFill = isMobile && keyboardInset > 0
 
   return (
     <div
@@ -489,6 +490,22 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
           Press [/] or [⌘K] to focus · [Tab] autocomplete · [↑↓] history
         </span>
       </div>
+
+      {showKeyboardFill && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: keyboardInset,
+            background: tc.bg,
+            borderTop: `1px solid ${tc.border}`,
+            pointerEvents: 'none',
+            zIndex: 59,
+          }}
+        />
+      )}
     </div>
   )
 }
