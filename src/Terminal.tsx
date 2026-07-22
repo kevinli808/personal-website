@@ -43,6 +43,7 @@ const INPUT_ROW_H = 44
 const HANDLE_H    = 8
 const MIN_OUT_H   = 0
 const MAX_OUT_H   = 500
+const MOBILE_FOCUS_OUT_H = 144
 
 export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioToggle, onMatrixToggle, onKeyClick }: Props) {
   const [input, setInput]           = useState('')
@@ -52,6 +53,8 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
   const [histIdx, setHistIdx]       = useState(-1)
   const [savedInput, setSavedInput] = useState('')
   const [outputH, setOutputH]       = useState(MIN_OUT_H)
+  const [isMobile, setIsMobile]     = useState(false)
+  const [keyboardInset, setKeyboardInset] = useState(0)
 
   const inputRef  = useRef<HTMLInputElement>(null)
   const outputRef = useRef<HTMLDivElement>(null)
@@ -109,7 +112,7 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
   }, [headerHeight])
 
   // Dragging the terminal body resizes the output panel while preserving the fixed shell layout.
-  const onDragStart = useCallback((e: React.MouseEvent) => {
+  const onDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault()
     dragging.current   = true
     dragStartY.current = e.clientY
@@ -119,7 +122,7 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
   }, [outputH])
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       if (!dragging.current) return
       const delta = dragStartY.current - e.clientY
       setOutputH(Math.min(MAX_OUT_H, Math.max(MIN_OUT_H, dragStartH.current + delta)))
@@ -130,13 +133,49 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
       document.body.style.cursor    = ''
       document.body.style.userSelect = ''
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup',   onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup',   onUp)
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup',   onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup',   onUp)
     }
   }, [])
+
+  // Mobile devices need a coarse-pointer check so the terminal can react to touch while
+  // keeping the desktop drag behavior intact.
+  useEffect(() => {
+    const media = window.matchMedia('(pointer: coarse)')
+    const syncMobile = () => setIsMobile(media.matches)
+    syncMobile()
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', syncMobile)
+      return () => media.removeEventListener('change', syncMobile)
+    }
+    media.addListener(syncMobile)
+    return () => media.removeListener(syncMobile)
+  }, [])
+
+  // When the on-screen keyboard opens on mobile, the viewport shrinks and the fixed terminal
+  // can be pushed behind the keyboard. Lift the shell up by the current keyboard inset so the
+  // input stays reachable without changing desktop layout.
+  useEffect(() => {
+    if (!isMobile || typeof window === 'undefined') return
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const syncViewport = () => {
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      setKeyboardInset(inset)
+    }
+
+    syncViewport()
+    viewport.addEventListener('resize', syncViewport)
+    viewport.addEventListener('scroll', syncViewport)
+    return () => {
+      viewport.removeEventListener('resize', syncViewport)
+      viewport.removeEventListener('scroll', syncViewport)
+    }
+  }, [isMobile])
 
   // Command router turns shell-style input into the portfolio navigation and UI actions.
   const exec = useCallback((raw: string) => {
@@ -303,7 +342,8 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
     <div
       style={{
         position: 'fixed',
-        bottom: 0, left: 0, right: 0,
+        bottom: isMobile ? keyboardInset : 0,
+        left: 0, right: 0,
         zIndex: 60,
         display: 'flex',
         flexDirection: 'column',
@@ -314,7 +354,7 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
     >
       {/* ── Drag handle ── */}
       <div
-        onMouseDown={onDragStart}
+        onPointerDown={onDragStart}
         style={{
           height: HANDLE_H,
           flexShrink: 0,
@@ -322,6 +362,7 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          touchAction: 'none',
         }}
         title="Drag to resize"
       >
@@ -417,7 +458,10 @@ export function Terminal({ headerHeight, theme, onTheme, audioPlaying, onAudioTo
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            onFocus={() => setIsFocused(true)}
+            onFocus={() => {
+              setIsFocused(true)
+              if (isMobile) setOutputH(prev => Math.max(prev, MOBILE_FOCUS_OUT_H))
+            }}
             onBlur={() => setIsFocused(false)}
             spellCheck={false}
             autoComplete="off"
